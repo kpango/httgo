@@ -17,10 +17,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/kpango/gache"
 )
 
 type HTTPClient struct {
-	cache           *Cache
 	cacheEnabled    bool
 	errors          []error
 	maxRedirect     int
@@ -321,7 +322,7 @@ func (c *HTTPClient) SetTLSConfig(config *tls.Config) *HTTPClient {
 
 func (c *HTTPClient) EnableCache() *HTTPClient {
 	c.cacheEnabled = true
-	c.cache = NewCache()
+	gache.GetCache()
 	return c
 }
 
@@ -368,10 +369,10 @@ func (c *HTTPClient) DoWithContext(ctx context.Context) *HTTPClient {
 func (c *HTTPClient) do() *HTTPClient {
 
 	if c.cacheEnabled {
-		cres, ok := c.cache.Get(c.request.req)
+		cres, ok := gache.Get(c.request.req)
 
 		if ok {
-			c.res = cres.Resp
+			c.res = cres.Res
 			c.request.isRequested = true
 			return c
 		}
@@ -414,10 +415,7 @@ func (c *HTTPClient) do() *HTTPClient {
 
 	go func() {
 		if c.cacheEnabled {
-			cached, err := CreateHTTPCache(res)
-			if err == nil {
-				c.cache.Set(c.request.req, cached)
-			}
+			gache.Set(c.request.req, c.res)
 		}
 	}()
 
@@ -516,7 +514,7 @@ func (c *HTTPClient) GetErrors() []error {
 }
 
 func (c *HTTPClient) ResetCache() *HTTPClient {
-	c.cache.Clear()
+	gache.GetCache().Clear()
 	return c
 }
 
